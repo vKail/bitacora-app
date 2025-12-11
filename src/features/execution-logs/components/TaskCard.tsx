@@ -28,7 +28,15 @@ type Plan = {
     description: string;
     standardCode: string | null;
     bitacoraName?: string;
+    risk?: string;
+    frequency?: string;
   };
+  execution?: {
+      completedBy: string;
+      tr: number;
+      tm: number;
+      observations?: string;
+  }
 }
 
 // Helper to check if activity requires calibration formulas
@@ -89,8 +97,59 @@ export default function TaskCard({ plan }: { plan: Plan }) {
     return (
         <Card className="bg-green-50 border-green-200">
             <CardHeader className="pb-3">
-                <CardTitle className="text-base text-green-900">{plan.activity.description}</CardTitle>
-                <CardDescription className="text-green-700">Completado</CardDescription>
+                <div className="flex justify-between items-start">
+                    <div className="space-y-1 w-full">
+                        <div className="flex items-center gap-2">
+                             <CardTitle className="text-base text-green-900 font-semibold">{plan.activity.description}</CardTitle>
+                             <span className="text-[10px] bg-green-200 text-green-800 px-1.5 py-0.5 rounded font-bold">COMPLETADO</span>
+                        </div>
+                        <CardDescription className="text-green-800">
+                            {plan.activity.bitacoraName && <span className="block font-medium mb-1">{plan.activity.bitacoraName}</span>}
+                            
+                            {/* Metadata Badges */}
+                            <div className="flex flex-wrap gap-2 text-xs mb-2 opacity-90">
+                                {plan.activity.standardCode && (
+                                    <span className="bg-green-100 px-1.5 py-0.5 rounded border border-green-200">
+                                        Norma: {plan.activity.standardCode}
+                                    </span>
+                                )}
+                                <span className="bg-green-100 px-1.5 py-0.5 rounded border border-green-200">
+                                    {plan.activity.frequency}
+                                </span>
+                                {plan.activity.risk === 'ALTO' && (
+                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded border border-red-200 font-medium">
+                                        Riesgo Alto
+                                    </span>
+                                )}
+                            </div>
+
+
+
+                            <span className="block text-xs text-green-700/80 mb-2">
+                                {new Date(plan.scheduledDate).toLocaleDateString('es-ES', { timeZone: 'UTC', dateStyle: 'long' })}
+                            </span>
+
+                            {/* Execution Details */}
+                            {plan.execution && (
+                                <div className="mt-2 pt-2 border-t border-green-200 space-y-1 text-sm bg-green-100/50 p-2 rounded">
+                                    <div className="flex justify-between">
+                                        <span className="text-green-800/70">Realizado por:</span>
+                                        <span className="font-medium text-green-900">{plan.execution.completedBy}</span>
+                                    </div>
+                                    <div className="flex gap-4 text-xs font-mono text-green-800">
+                                        <span>TR: {plan.execution.tr.toFixed(1)}h</span>
+                                        <span>TM: {plan.execution.tm.toFixed(1)}h</span>
+                                    </div>
+                                    {plan.execution.observations && (
+                                        <div className="mt-1 text-xs text-green-800 italic">
+                                            "{plan.execution.observations}"
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </CardDescription>
+                    </div>
+                </div>
             </CardHeader>
         </Card>
     )
@@ -124,11 +183,44 @@ export default function TaskCard({ plan }: { plan: Plan }) {
                              })()}
                         </div>
                         <CardDescription>
-                            {plan.activity.bitacoraName && <span className="block font-medium text-slate-700 mb-1">{plan.activity.bitacoraName}</span>}
-                            {plan.activity.standardCode ? `Código: ${plan.activity.standardCode}` : 'Mantenimiento General'}
-                            <span className="block text-xs mt-1">
+                            {plan.activity.bitacoraName && (
+                                <span className="block font-medium text-slate-700 mb-1">{plan.activity.bitacoraName}</span>
+                            )}
+                            
+                            {/* Metadata Badges */}
+                            <div className="flex flex-wrap gap-2 text-xs mb-2">
+                                {plan.activity.standardCode && (
+                                    <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                                        Norma: {plan.activity.standardCode}
+                                    </span>
+                                )}
+                                <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                                    {plan.activity.frequency}
+                                </span>
+                                {plan.activity.risk === 'ALTO' && (
+                                    <span className="bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-100 font-medium">
+                                        Riesgo Alto
+                                    </span>
+                                )}
+                            </div>
+
+                            <span className="block text-xs text-slate-500">
                                 {new Date(plan.scheduledDate).toLocaleDateString('es-ES', { timeZone: 'UTC', dateStyle: 'long' })}
                             </span>
+
+                            {/* Execution Details (Only if Completed) */}
+                            {plan.execution && (
+                                <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">Realizado por:</span>
+                                        <span className="font-medium text-slate-800">{plan.execution.completedBy}</span>
+                                    </div>
+                                    <div className="flex gap-4 text-xs">
+                                        <span className="font-mono text-slate-600">TR: {plan.execution.tr.toFixed(1)}h</span>
+                                        <span className="font-mono text-slate-600">TM: {plan.execution.tm.toFixed(1)}h</span>
+                                    </div>
+                                </div>
+                            )}
                         </CardDescription>
                     </div>
                     <DialogTrigger asChild>

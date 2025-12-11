@@ -170,14 +170,16 @@ export async function importExcelPlan(prevState: any, formData: FormData) {
                  // Increment
                  if (frequency === 'DIARIA') {
                      iterDate.setDate(iterDate.getDate() + 1)
-                     // Skip weekends if implied? User didn't ask, but implied "Business days"?
-                     // "todo el año diariamente" -> literal daily.
                  } else if (frequency === 'SEMANAL') {
                      iterDate.setDate(iterDate.getDate() + 7)
                  } else if (frequency === 'MENSUAL') {
                      iterDate.setMonth(iterDate.getMonth() + 1)
+                 } else if (frequency === 'TRIMESTRAL') {
+                     iterDate.setMonth(iterDate.getMonth() + 3)
+                 } else if (frequency === 'SEMESTRAL') {
+                     iterDate.setMonth(iterDate.getMonth() + 6)
                  } else {
-                     // Single time if unknown frequency or 'ONCE'
+                     // Single time
                      break
                  }
             }

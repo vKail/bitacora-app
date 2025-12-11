@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import Link from 'next/link'
 import { Plus, Calendar, Clock, BarChart, CalendarDays } from 'lucide-react'
 import CreateBitacoraDialog from '@/features/bitacoras/components/CreateBitacoraDialog'
+import DeleteBitacoraButton from '@/features/bitacoras/components/DeleteBitacoraButton'
 
 export default async function BitacorasPage() {
   const bitacoras = await getBitacoras()
@@ -24,12 +25,17 @@ export default async function BitacorasPage() {
             <Card key={bitacora.id} className="hover:shadow-lg transition-all border-l-4 border-l-blue-600">
                 <CardHeader>
                     <div className="flex justify-between items-start">
-                         <CardTitle className="text-lg">{bitacora.name}</CardTitle>
-                         <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                            {bitacora.year}
-                         </span>
+                         <div className="flex flex-col gap-1">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                {bitacora.name}
+                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                                    {bitacora.year}
+                                </span>
+                            </CardTitle>
+                            <CardDescription>{bitacora.description || 'Sin descripción'}</CardDescription>
+                         </div>
+                         <DeleteBitacoraButton id={bitacora.id} name={bitacora.name} />
                     </div>
-                    <CardDescription>{bitacora.description || 'Sin descripción'}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-slate-600">
                     <div className="flex items-center gap-2">

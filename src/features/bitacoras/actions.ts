@@ -44,6 +44,18 @@ export async function createBitacora(prevState: any, formData: FormData) {
     }
 }
 
+export async function deleteBitacora(id: string) {
+    try {
+        const { error } = await supabase.from('bitacoras').delete().eq('id', id)
+        if (error) throw error
+        revalidatePath('/admin/bitacoras')
+        return { success: true }
+    } catch (error) {
+        console.error('Error deleting bitacora:', error)
+        return { error: 'Error al eliminar bitácora' }
+    }
+}
+
 export async function getBitacoras() {
     // Fetch all bitacoras, ordered by year desc, then name
     const { data, error } = await supabase

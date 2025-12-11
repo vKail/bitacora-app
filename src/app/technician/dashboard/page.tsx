@@ -40,6 +40,10 @@ export default async function TechnicianDashboard({
   
   console.log('Server Today:', todayStr)
   
+  // 2. Fetch Users for Mapping
+  const { data: users } = await supabase.from('users').select('id, role')
+  const userMap = new Map(users?.map(u => [u.id, u.role || 'TECNICO']) || [])
+
   // View Range (Past -> +7 days)
   const endOfView = endOfDay(new Date())
   endOfView.setDate(endOfView.getDate() + 7) 
@@ -55,7 +59,17 @@ export default async function TechnicianDashboard({
             id,
             description,
             standard_code,
+            risk_level,
+            frequency_type,
             bitacora_id
+        ),
+        logs:execution_logs (
+            id,
+            execution_time_minutes,
+            tm_minutes,
+            executed_by,
+            is_completed,
+            observations
         )
     `)
     .lte('scheduled_date', endIso)
@@ -74,17 +88,34 @@ export default async function TechnicianDashboard({
 
   const bitacoraMap = new Map(bitacoras?.map(b => [b.id, b.name]))
 
-  const formattedPlans = plans.map((p: any) => ({
-      id: p.id,
-      scheduledDate: p.scheduled_date,
-      status: p.status,
-      activity: {
-          id: p.activity?.id,
-          description: p.activity?.description,
-          standardCode: p.activity?.standard_code,
-          bitacoraName: p.activity?.bitacora_id ? bitacoraMap.get(p.activity.bitacora_id) : undefined
+  const formattedPlans = plans.map((p: any) => {
+      const log = p.logs?.[0] // Assuming 1 log per plan per execution cycle generally
+      
+      return {
+          id: p.id,
+          scheduledDate: p.scheduled_date,
+          status: p.status,
+          activity: {
+              id: p.activity?.id,
+              description: p.activity?.description,
+              standardCode: p.activity?.standard_code,
+              risk: p.activity?.risk_level,
+              frequency: p.activity?.frequency_type,
+              bitacoraName: p.activity?.bitacora_id ? bitacoraMap.get(p.activity.bitacora_id) : undefined
+          },
+          execution: log ? {
+              completedBy: userMap.get(log.executed_by) || 'Desconocido',
+              tr: (log.execution_time_minutes || 0) / 60,
+              tm: (() => {
+                  if (log.tm_minutes && log.tm_minutes > 0) return log.tm_minutes / 60
+                  // Fallback for legacy JSON data
+                  const match = log.observations?.match(/"tm_hours":\s*([\d.]+)/)
+                  return match ? parseFloat(match[1]) : 0
+              })(),
+              observations: log.observations?.replace(/\[DATA:.*?\]/, '').trim()
+          } : undefined
       }
-  }))
+  })
 
   const sortedPlans = formattedPlans.sort((a: any, b: any) => {
       // Urgent sorts first
@@ -117,7 +148,7 @@ export default async function TechnicianDashboard({
         <div className="flex items-center gap-4">
            {bitacoras && <BitacoraSelector bitacoras={bitacoras} />}
            <div className="text-sm text-slate-600 hidden md:block">
-              {user.email}
+              {user.role}
            </div>
         </div>
       </div>

@@ -93,16 +93,24 @@ export default function ManualTaskForm({ bitacoraId, year, dailyHours }: Props) 
 
 
 
-            <div className="grid gap-2">
-                <Label>Frecuencia Original (Referencia)</Label>
-                <Select name="frequency_type" required defaultValue="DIARIA">
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="DIARIA">Diaria</SelectItem>
-                        <SelectItem value="SEMANAL">Semanal</SelectItem>
-                        <SelectItem value="MENSUAL">Mensual</SelectItem>
-                    </SelectContent>
-                </Select>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label>Norma (Opcional)</Label>
+                    <Input name="standard" placeholder="Ej: ISO-9001" />
+                </div>
+                <div className="grid gap-2">
+                    <Label>Frecuencia Original (Referencia)</Label>
+                    <Select name="frequency_type" required defaultValue="DIARIA">
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="DIARIA">Diaria</SelectItem>
+                            <SelectItem value="SEMANAL">Semanal</SelectItem>
+                            <SelectItem value="MENSUAL">Mensual</SelectItem>
+                            <SelectItem value="TRIMESTRAL">Trimestral</SelectItem>
+                            <SelectItem value="SEMESTRAL">Semestral</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             <DialogFooter>

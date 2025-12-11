@@ -6,8 +6,9 @@ import { z } from 'zod'
 
 const TaskSchema = z.object({
   description: z.string().min(3),
-  frequency_type: z.enum(['DIARIA', 'SEMANAL', 'MENSUAL']),
+  frequency_type: z.enum(['DIARIA', 'SEMANAL', 'MENSUAL', 'TRIMESTRAL', 'SEMESTRAL']),
   risk_level: z.enum(['BAJO', 'MEDIO', 'ALTO']),
+  standard: z.string().optional(),
   date: z.string().min(10), // YYYY-MM-DD
   tr_hours: z.coerce.number().optional().default(0),
   tm_hours: z.coerce.number().optional().default(0),
@@ -15,27 +16,10 @@ const TaskSchema = z.object({
   daily_hours: z.coerce.number().optional().default(4)
 })
 
-// Helper: Ensure Bitacora
-async function ensureBitacora(year: number, dailyHours: number) {
-    const { data: existing } = await supabase.from('bitacoras').select('id').eq('year', year).single()
-    if (existing) {
-        if (dailyHours && dailyHours !== 4) {
-             await supabase.from('bitacoras').update({ daily_hours: dailyHours }).eq('id', existing.id)
-        }
-        return existing.id
-    }
-    const { data: newVal, error } = await supabase
-        .from('bitacoras')
-        .insert({ year, daily_hours: dailyHours || 4, description: `Bitácora ${year}` })
-        .select('id')
-        .single()
-    if (error) throw error
-    return newVal.id
-}
+// ... (existing ensureBitacora)
 
 // Helper: Normalize activity
-// Helper: Normalize activity
-async function upsertActivity(description: string, frequency: string, risk: string, bitacoraId: string) {
+async function upsertActivity(description: string, frequency: string, risk: string, bitacoraId: string, standard?: string) {
     const { data: existing } = await supabase
         .from('activities')
         .select('id')
@@ -53,6 +37,7 @@ async function upsertActivity(description: string, frequency: string, risk: stri
             description,
             frequency_type: frequency,
             risk_level: risk,
+            standard_code: standard || null,
             bitacora_id: bitacoraId
         })
         .select('id')
@@ -70,7 +55,7 @@ export async function upsertManualTask(prevState: any, formData: FormData) {
     return { error: 'Datos inválidos', issues: parsed.error.issues }
   }
 
-  const { description, frequency_type, risk_level, date, tr_hours, tm_hours, operational_days, daily_hours } = parsed.data
+  const { description, frequency_type, risk_level, standard, date, tr_hours, tm_hours, operational_days, daily_hours } = parsed.data
   const bitacoraId = formData.get('bitacoraId') as string
   
   if (!bitacoraId) return { error: "Bitácora no especificada" }
@@ -82,15 +67,13 @@ export async function upsertManualTask(prevState: any, formData: FormData) {
      }
 
     // 1. Upsert Activity
-    const activityId = await upsertActivity(description, frequency_type, risk_level, bitacoraId)
+    const activityId = await upsertActivity(description, frequency_type, risk_level, bitacoraId, standard)
 
     // 2. Recurrence Logic (Full Year)
     const year = parseInt(formData.get('year') as string)
     const startDate = new Date(date)
     
     // Determine End Date (Dec 31st of the target year)
-    // NOTE: If the task date is in a future year, this logic might need adjustment. 
-    // Assuming context 'year' is the bitacora year.
     const loopEndDate = new Date(year, 11, 31) // Month is 0-indexed: 11 = Dec
     
     const tasksToInsert = []
@@ -110,11 +93,14 @@ export async function upsertManualTask(prevState: any, formData: FormData) {
             currentDate.setDate(currentDate.getDate() + 7)
         } else if (frequency_type === 'MENSUAL') {
             currentDate.setMonth(currentDate.getMonth() + 1)
+        } else if (frequency_type === 'TRIMESTRAL') {
+            currentDate.setMonth(currentDate.getMonth() + 3)
+        } else if (frequency_type === 'SEMESTRAL') {
+            currentDate.setMonth(currentDate.getMonth() + 6)
         } else if (frequency_type === 'DIARIA') {
             currentDate.setDate(currentDate.getDate() + 1)
         } else {
-            // If unknown frequency (shouldn't happen due to schema), 
-            // break to avoid infinite loop (treat as single task)
+            // Single task
             break 
         }
     }
