@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function YearSelector({ currentYear }: { currentYear: number }) {
   const router = useRouter()
   // Generate list of years (e.g., current +/- 2)
-  const years = [2023, 2024, 2025, 2026]
+  const currentYearInt = new Date().getFullYear()
+  const years = [currentYearInt - 1, currentYearInt, currentYearInt + 1, currentYearInt + 2]
 
   const handleYearChange = (val: string) => {
     router.push(`?year=${val}`)

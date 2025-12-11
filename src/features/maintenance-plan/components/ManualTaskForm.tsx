@@ -91,16 +91,7 @@ export default function ManualTaskForm({ bitacoraId, year, dailyHours }: Props) 
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                    <Label>TR (Horas)</Label>
-                    <Input name="tr_hours" type="number" step="any" min="0" placeholder="0.5" />
-                </div>
-                <div className="grid gap-2">
-                    <Label>TM (Horas) (Tiempo Muerto)</Label>
-                    <Input name="tm_hours" type="number" step="any" min="0" placeholder="0.25" />
-                </div>
-            </div>
+
 
             <div className="grid gap-2">
                 <Label>Frecuencia Original (Referencia)</Label>

@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea" 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { toast } from "sonner"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 type Plan = {
   id: number;
@@ -46,6 +47,11 @@ export default function TaskCard({ plan }: { plan: Plan }) {
   const [dataReal, setDataReal] = useState('')
   const [dataDisplay, setDataDisplay] = useState('')
 
+  // New Fields
+  const [status, setStatus] = useState('COMPLETADO') // Default to performed
+  const [trHours, setTrHours] = useState('')
+  const [tmHours, setTmHours] = useState('')
+
   const handleComplete = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -54,6 +60,9 @@ export default function TaskCard({ plan }: { plan: Plan }) {
     const formData = new FormData()
     formData.append('planId', plan.id.toString())
     formData.append('observations', observations)
+    formData.append('status', status)
+    if (trHours) formData.append('tr_hours', trHours)
+    if (tmHours) formData.append('tm_hours', tmHours)
     
     if (isCalibration(plan.activity.standardCode)) {
         formData.append('data_real', dataReal)
@@ -147,6 +156,41 @@ export default function TaskCard({ plan }: { plan: Plan }) {
                         onChange={(e) => setObservations(e.target.value)}
                         placeholder="Detalles adicionales..."
                     />
+                </div>
+
+                <div className="grid gap-4 py-2 border-t border-b border-slate-100">
+                    <Label className="text-base font-semibold">Estado de Ejecución</Label>
+                    <RadioGroup defaultValue="COMPLETADO" value={status} onValueChange={setStatus} className="flex flex-row gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="COMPLETADO" id="r-completed" />
+                            <Label htmlFor="r-completed">Realizado</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="NO_REALIZADO" id="r-not-completed" />
+                            <Label htmlFor="r-not-completed">No Realizado</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label>TR (Horas)</Label>
+                        <Input 
+                            value={trHours} 
+                            onChange={e => setTrHours(e.target.value)} 
+                            type="number" step="any" min="0" 
+                            placeholder="Ej: 0.5" 
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>TM (Horas)</Label>
+                        <Input 
+                            value={tmHours} 
+                            onChange={e => setTmHours(e.target.value)} 
+                            type="number" step="any" min="0" 
+                            placeholder="Ej: 0.25" 
+                        />
+                    </div>
                 </div>
 
                 <DialogFooter>

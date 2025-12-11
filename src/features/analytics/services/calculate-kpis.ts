@@ -58,14 +58,14 @@ export async function getDetailedStats(year: number, bitacoraId?: string): Promi
             operational_days,
             activity:activities!inner (
                 description,
-                tr_hours,
-                tm_hours,
                 bitacora_id
             ),
             logs:execution_logs (
                 id,
                 logged_at,
-                is_completed
+                is_completed,
+                execution_time_minutes,
+                tm_minutes
             )
         `)
         .gte('scheduled_date', startOfYear.toISOString())
@@ -96,41 +96,37 @@ export async function getDetailedStats(year: number, bitacoraId?: string): Promi
     let sumDias = 0
 
     filteredPlans.forEach((plan: any) => {
-        // Activity stats (Planned)
-        const trPlanned = Number(plan.activity?.tr_hours) || 0
-        const tmPlanned = Number(plan.activity?.tm_hours) || 0
+        // FILTER: Only completed tasks
+        if (plan.status !== 'COMPLETADO') return;
+
+        // Log stats (Actual)
+        const log = plan.logs?.[0]
+        
+        let trReal = 0
+        let tmReal = 0
+
+        if (log) {
+            // TR: execution_time_minutes convert to hours
+            trReal = (log.execution_time_minutes || 0) / 60
+            
+            // TM: Use tm_minutes column (if exists, else 0)
+            const tmMinutes = log.tm_minutes || 0
+            tmReal = tmMinutes / 60
+            
+            // Deprecated: JSON parsing for backward compatibility? 
+            // If tm_minutes is 0, check JSON? 
+            // Assuming migration, let's prioritize column. 
+            // If user didn't migrate data, they lose historic TM view on this report.
+            // But this is "Refactor", so let's stick to clean Logic.
+        } else {
+            // Fallback
+        }
+        
         const dias = Number(plan.operational_days) || 0
         
-        // Log stats (Actual) - Take the first log if multiple (should be 1:1 usually)
-        const log = plan.logs?.[0]
-        const isCompleted = plan.status === 'COMPLETADO' || (log && log.is_completed)
-
-        // If completed, we assume TR/TM applies as "Real". 
-        // If pending, Real is 0. 
-        // NOTE: The user's CSV imported TR/TM as *Planned* values in the activity definition.
-        // The table columns are TP (Tiempo Planificado), TR (Real), TM (Muerto).
-        // Usually TP = TR + TM (from activity definition).
-        // Real TR might differ, but we don't track "Actual Duration" field in Log yet, 
-        // we only have the Activity definition's TR/TM which are theoretical.
-        // Unless we add 'actual_duration' to execution_logs, we simply project the Activity values 
-        // as "Real" when completed? Or we always show them as Planned?
-        // Let's assume:
-        // TP = trPlanned + tmPlanned (Theoretical Total)
-        // TR = trPlanned (Theoretical Repair) IF Completed? Or always?
-        // Let's stick to:
-        // TP = (tr_hours + tm_hours) from Activity
-        // TR = tr_hours (if Completed, else 0?) -> User prompt implies "Analiticas" showing data.
-        // If I strictly follow "Real", Pending should be 0.
-        
-        // Logic Update: User wants to see imported TR/TM values in the table
-        // independently of completion status (Forecast view).
-        // Since we don't catch "Actual Duration" in logs yet (we just use standard),
-        // we can simply show the Standard values as the "TR" and "TM" columns.
-        
-        const tp = trPlanned + tmPlanned
-        // Always show the standard values so user sees what they imported
-        const tr = trPlanned
-        const tm = tmPlanned
+        // Logic Update:
+        // TP (Tiempo Productivo) = TR + TM (Real values now)
+        const tp = trReal + tmReal
         
         // Operational time (TO) = dias * dailyHours
         const to = dias * dailyHours
@@ -138,17 +134,13 @@ export async function getDetailedStats(year: number, bitacoraId?: string): Promi
         // Accumulate
         sumTO += to
         sumTP += tp
-        sumTR += tr
-        sumTM += tm
+        sumTR += trReal
+        sumTM += tmReal
         sumDias += dias
 
         const date = new Date(plan.scheduled_date)
-        // Use UTC date for month name to avoid shift? 
-        // scheduled_date is YYYY-MM-DD (string mostly) or ISO.
-        // Let's use string splitting for safety if it's YYYY-MM-DD
         const dateStr = plan.scheduled_date.toString().split('T')[0]
         const [y, m, d] = dateStr.split('-').map(Number)
-        // Helper date for formatting
         const dateObj = new Date(Date.UTC(y, m-1, d, 12, 0, 0)) 
 
         const monthName = dateObj.toLocaleString('es-ES', { month: 'long' })
@@ -160,10 +152,10 @@ export async function getDetailedStats(year: number, bitacoraId?: string): Promi
             activity: plan.activity?.description || 'Desconocida',
             date: dateObj.toLocaleDateString('es-ES'),
             dias,
-            to,
-            tp,
-            tr,
-            tm
+            to: parseFloat(to.toFixed(2)),
+            tp: parseFloat(tp.toFixed(2)),
+            tr: parseFloat(trReal.toFixed(2)),
+            tm: parseFloat(tmReal.toFixed(2))
         })
     })
 

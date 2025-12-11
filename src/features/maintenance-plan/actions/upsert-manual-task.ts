@@ -34,7 +34,8 @@ async function ensureBitacora(year: number, dailyHours: number) {
 }
 
 // Helper: Normalize activity
-async function upsertActivity(description: string, frequency: string, risk: string, tr: number, tm: number, bitacoraId: string) {
+// Helper: Normalize activity
+async function upsertActivity(description: string, frequency: string, risk: string, bitacoraId: string) {
     const { data: existing } = await supabase
         .from('activities')
         .select('id')
@@ -43,9 +44,6 @@ async function upsertActivity(description: string, frequency: string, risk: stri
         .single()
 
     if (existing) {
-        if (tr > 0 || tm > 0) {
-            await supabase.from('activities').update({ tr_hours: tr, tm_hours: tm }).eq('id', existing.id)
-        }
         return existing.id
     }
 
@@ -55,8 +53,6 @@ async function upsertActivity(description: string, frequency: string, risk: stri
             description,
             frequency_type: frequency,
             risk_level: risk,
-            tr_hours: tr,
-            tm_hours: tm,
             bitacora_id: bitacoraId
         })
         .select('id')
@@ -86,7 +82,7 @@ export async function upsertManualTask(prevState: any, formData: FormData) {
      }
 
     // 1. Upsert Activity
-    const activityId = await upsertActivity(description, frequency_type, risk_level, tr_hours, tm_hours, bitacoraId)
+    const activityId = await upsertActivity(description, frequency_type, risk_level, bitacoraId)
 
     // 2. Recurrence Logic (Full Year)
     const year = parseInt(formData.get('year') as string)

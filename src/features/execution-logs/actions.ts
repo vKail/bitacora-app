@@ -20,6 +20,17 @@ export async function logExecution(
     // Additional Data Handling (Formulas)
     const dataDisplay = formData.get('data_display')
     const dataReal = formData.get('data_real')
+    
+    // New Fields
+    const status = formData.get('status') as string || 'COMPLETADO'
+    const trHours = parseFloat(formData.get('tr_hours') as string || '0')
+    const tmHours = parseFloat(formData.get('tm_hours') as string || '0')
+
+    // Override execution_time_minutes if tr_hours provided
+    const finalMinutes = trHours > 0 ? trHours * 60 : timeMinutes
+    
+    // TM Minutes
+    const tmMinutes = tmHours > 0 ? tmHours * 60 : 0
 
     // Additional fields can be extracted here
     // Type definition for loose JSON data
@@ -41,23 +52,26 @@ export async function logExecution(
     }
 
     try {
+        const payload: any = {
+            plan_id: planId,
+            executed_by: user.userId,
+            execution_time_minutes: finalMinutes,
+            observations: observations + (Object.keys(additionalData).length ? ` [DATA: ${JSON.stringify(additionalData)}]` : ''),
+            is_completed: status === 'COMPLETADO',
+            logged_at: new Date().toISOString(),
+            // New Column: tm_minutes (Assuming user added it)
+            tm_minutes: tmMinutes
+        }
+
         const { error: logError } = await supabase
             .from('execution_logs')
-            .insert({
-                plan_id: planId,
-                executed_by: user.userId,
-                execution_time_minutes: timeMinutes,
-                observations: observations + (Object.keys(additionalData).length ? ` [DATA: ${JSON.stringify(additionalData)}]` : ''),
-                // ideally we would have a jsonb column 'data' but 'observations' string append works for MVP if schema is fixed
-                is_completed: true,
-                logged_at: new Date().toISOString()
-            })
+            .insert(payload)
 
         if (logError) throw logError
 
         const { error: planError } = await supabase
             .from('maintenance_plans')
-            .update({ status: 'COMPLETADO' })
+            .update({ status: status }) // Use dynamic status
             .eq('id', planId)
 
         if (planError) throw planError

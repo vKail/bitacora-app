@@ -24,18 +24,16 @@ async function ensureBitacora(year: number, dailyHours: number = 4) {
 
 // Helper: Normalize activity (Upsert) - Scoped to Bitacora?
 // NOTE: If activities are unique to a bitacora, we must include bitacora_id in the search.
-async function upsertActivity(description: string, frequency: string, risk: string, bitacoraId: string, standard?: string, tr?: number, tm?: number) {
+// Helper: Normalize activity (Upsert)
+async function upsertActivity(description: string, frequency: string, risk: string, bitacoraId: string, standard?: string) {
     const { data: existing } = await supabase
         .from('activities')
         .select('id')
         .eq('description', description)
-        .eq('bitacora_id', bitacoraId) // Scope to this Year/Bitacora!
+        .eq('bitacora_id', bitacoraId)
         .single()
 
     if (existing) {
-        if (tr !== undefined || tm !== undefined) {
-             await supabase.from('activities').update({ tr_hours: tr, tm_hours: tm }).eq('id', existing.id)
-        }
         return existing.id
     }
 
@@ -46,8 +44,6 @@ async function upsertActivity(description: string, frequency: string, risk: stri
             frequency_type: frequency,
             risk_level: risk,
             standard_code: standard || null,
-            tr_hours: tr || 0,
-            tm_hours: tm || 0,
             bitacora_id: bitacoraId
         })
         .select('id')
@@ -100,8 +96,9 @@ export async function importExcelPlan(prevState: any, formData: FormData) {
             const dateRaw = row['Fecha']
             
             // New Fields
-            const tr = row['TR'] ? parseFloat(row['TR']) : undefined
-            const tm = row['TM'] ? parseFloat(row['TM']) : undefined
+            // New Fields
+            const tr = row['TR'] ? parseFloat(row['TR']) : 0
+            const tm = row['TM'] ? parseFloat(row['TM']) : 0
             const dias = row['Dias'] ? parseInt(row['Dias']) : 0 // Días Operativos
             // Read daily hours (Bitacora property now)
             // If provided updates the global bitacora setting?
@@ -115,7 +112,7 @@ export async function importExcelPlan(prevState: any, formData: FormData) {
             if (!description) continue
 
             // 1. Upsert Activity (Scoped to Bitacora)
-            const activityId = await upsertActivity(description, frequency, risk, bitacoraId, standard, tr, tm)
+            const activityId = await upsertActivity(description, frequency, risk, bitacoraId, standard)
 
             // 2. Determine Dates (Recurrence to Full Year)
             const datesToCreate: string[] = []
